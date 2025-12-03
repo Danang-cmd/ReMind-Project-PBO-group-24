@@ -1,0 +1,291 @@
+package ui;
+
+import javax.swing.*;
+import model.Card;
+import util.ImageLoader;
+import util.ShuffleUtil;
+import database.ScoreDAO;
+import javax.sound.sampled.*;
+
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
+
+public class GameFrame extends JPanel {
+
+    private final LoginFrame mainFrame;
+    private final String username;
+
+    private final ArrayList<Card> cards = new ArrayList<>();
+    private Card first = null;
+    private Card second = null;
+    private boolean processing = false;
+    private int timeLeft = 60;
+    private JLabel timerLabel;
+    private int matchedPairs = 0;
+
+    private final ImageIcon backImg;
+    private Timer gameTimer;
+    private boolean gameEnded = false;
+    private Clip bgmClip;
+
+    public GameFrame(LoginFrame mainFrame, String username) {
+
+        this.mainFrame = mainFrame;
+        this.username = username;
+
+        setLayout(new BorderLayout());
+        setBackground(UIStyles.BACKGROUND);
+
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+
+        JLabel userLabel = new JLabel("Player: " + username);
+        userLabel.setFont(UIStyles.BOLD_LARGE);
+        userLabel.setForeground(UIStyles.NEON_ACCENT);
+        header.add(userLabel, BorderLayout.WEST);
+
+        timerLabel = new JLabel("Time: " + timeLeft, SwingConstants.RIGHT);
+        timerLabel.setFont(UIStyles.BOLD_LARGE);
+        timerLabel.setForeground(UIStyles.NEON_ACCENT);
+        header.add(timerLabel, BorderLayout.EAST);
+
+        add(header, BorderLayout.NORTH);
+
+        JPanel center = new JPanel(new GridBagLayout());
+        center.setOpaque(false);
+        add(center, BorderLayout.CENTER);
+
+        JPanel board = new JPanel(new GridLayout(4, 4, 12, 12));
+        board.setOpaque(false);
+        board.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        center.add(board);
+
+        backImg = ImageLoader.loadImage("assets/cards/back.png", 120, 120);
+
+        ArrayList<Integer> randomCards = ShuffleUtil.getRandomCards();
+
+        for (int i = 0; i < 16; i++) {
+            int value = randomCards.get(i);
+            JButton btn = createCardButton();
+            ImageIcon front = ImageLoader.loadImage("assets/cards/card" + value + ".png", 120, 120);
+
+            Card card = new Card(value, btn, i);
+            cards.add(card);
+
+            btn.addActionListener((ActionEvent e) -> onCardClicked(card, front));
+            btn.setIcon(backImg);
+            board.add(btn);
+        }
+
+        JPanel footer = new JPanel();
+        footer.setOpaque(false);
+        footer.setBorder(BorderFactory.createEmptyBorder(8, 8, 16, 8));
+        JButton quit = UIStyles.createNeonButton("Quit");
+        quit.addActionListener(e -> {
+            stopTimer();
+            stopMusic();
+            mainFrame.showMainMenuView(username);
+        });
+        footer.add(quit);
+        add(footer, BorderLayout.SOUTH);
+
+        SwingUtilities.invokeLater(() -> showCountdown());
+    }
+
+    private JButton createCardButton() {
+        JButton btn = new JButton();
+        btn.setPreferredSize(new Dimension(120, 120));
+        btn.setFocusPainted(false);
+        btn.setBorder(UIStyles.neonBorder());
+        btn.setBackground(UIStyles.CARD_BG);
+        btn.setOpaque(true);
+
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        return btn;
+    }
+
+
+    private void onCardClicked(Card card, ImageIcon front) {
+
+        if (processing) return;
+        if (card.matched) return;
+        if (first != null && first.position == card.position) return;
+
+        card.button.setIcon(front);
+
+        if (first == null) {
+            first = card;
+            return;
+        }
+
+        second = card;
+        processing = true;
+
+        if (first.id == second.id && first.position != second.position) {
+
+            first.matched = true;
+            second.matched = true;
+            matchedPairs++;
+
+            first.button.setEnabled(false);
+            second.button.setEnabled(false);
+
+            new java.util.Timer().schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    SwingUtilities.invokeLater(() -> {
+                        first = null;
+                        second = null;
+                        processing = false;
+                    });
+                }
+            }, 300);
+
+            if (matchedPairs == 8) {
+                endGame();
+            }
+            return;
+
+        } else {
+
+            new java.util.Timer().schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    SwingUtilities.invokeLater(() -> {
+                        first.button.setIcon(backImg);
+                        second.button.setIcon(backImg);
+                        first = null;
+                        second = null;
+                        processing = false;
+                    });
+                }
+            }, 700);
+        }
+    }
+
+    private void showCountdown() {
+
+        JDialog dialog = new JDialog(mainFrame, "Get Ready!", true);
+        dialog.setUndecorated(true);
+        dialog.setSize(240, 180);
+        dialog.setLocationRelativeTo(mainFrame);
+
+        Image bg = new ImageIcon("assets/bg/countdown_bg.png").getImage();
+
+        JPanel content = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                g.drawImage(bg, 0, 0, getWidth(), getHeight(), null);
+            }
+        };
+
+        content.setOpaque(false);
+        dialog.setContentPane(content);
+
+        JLabel lbl = new JLabel("3", SwingConstants.CENTER);
+        lbl.setFont(UIStyles.BOLD_XLARGE);
+        lbl.setForeground(UIStyles.NEON_ACCENT);
+        content.add(lbl, BorderLayout.CENTER);
+
+        java.util.Timer timer = new java.util.Timer();
+
+        timer.scheduleAtFixedRate(new java.util.TimerTask() {
+
+            int counter = 4;
+
+            @Override
+            public void run() {
+
+                SwingUtilities.invokeLater(() -> lbl.setText(String.valueOf(counter)));
+
+                counter--;
+
+                if (counter == 0) {
+                    timer.cancel();
+                    dialog.dispose();
+                    playMusic("assets/music/bgm.wav");
+                    startTimer();
+                }
+            }
+
+        }, 0, 1000);
+
+        dialog.setVisible(true);
+    }
+
+    private void startTimer() {
+        gameTimer = new Timer();
+        gameTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                timeLeft--;
+                SwingUtilities.invokeLater(() -> timerLabel.setText("Time: " + timeLeft));
+                if (timeLeft <= 0) {
+                    stopTimer();
+                    endGame();
+                }
+            }
+        }, 1000, 1000);
+    }
+
+    private void stopTimer() {
+        if (gameTimer != null) {
+            gameTimer.cancel();
+            gameTimer = null;
+        }
+    }
+
+    private void endGame() {
+
+        if (gameEnded) return;
+        gameEnded = true;
+        stopTimer();
+        stopMusic();
+
+        int score = matchedPairs * 100 + Math.max(timeLeft, 0) * 5;
+        ScoreDAO.saveScore(username, score);
+
+        SwingUtilities.invokeLater(() -> {
+            String msg;
+            if (matchedPairs == 8) {
+                msg = "You Win!\nScore: " + score;
+            } else {
+                msg = "Game Over!\nScore: " + score;
+            }
+
+            JOptionPane.showMessageDialog(mainFrame, msg);
+            mainFrame.showMainMenuView(username);
+        });
+    }
+
+    private void playMusic(String path) {
+        try {
+            stopMusic();
+
+            AudioInputStream audioStream = AudioSystem.getAudioInputStream(new java.io.File(path));
+            bgmClip = AudioSystem.getClip();
+            bgmClip.open(audioStream);
+            bgmClip.loop(Clip.LOOP_CONTINUOUSLY);
+        } catch (Exception e) {
+            System.out.println("Music error: " + e.getMessage());
+        }
+    }
+
+    private void stopMusic() {
+        try {
+            if (bgmClip != null) {
+                bgmClip.stop();
+                bgmClip.close();
+                bgmClip = null;
+            }
+        } catch (Exception e) {
+            System.out.println("Stop music error: " + e.getMessage());
+        }
+    }
+}
