@@ -15,7 +15,6 @@ public class LoginFrame extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
-
         showLoginView();
 
         setVisible(true);
