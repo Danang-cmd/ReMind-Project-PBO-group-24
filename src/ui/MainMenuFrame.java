@@ -3,20 +3,22 @@ package ui;
 import javax.swing.*;
 import java.awt.*;
 
-public class MainMenuFrame extends JPanel {
+public class MainMenuFrame extends BaseFrame {
+
     private Image bg = new ImageIcon("assets/bg/menu_bg.png").getImage();
+
+    public MainMenuFrame(LoginFrame mainFrame, String username) {
+        super(mainFrame, username);
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         g.drawImage(bg, 0, 0, getWidth(), getHeight(), null);
     }
 
-    private final LoginFrame mainFrame;
-    private final String username;
-
-    public MainMenuFrame(LoginFrame mainFrame, String username) {
-        this.mainFrame = mainFrame;
-        this.username = username;
+    @Override
+    protected void initComponents() {
 
         setLayout(new GridBagLayout());
         setBackground(UIStyles.BACKGROUND);
@@ -56,19 +58,8 @@ public class MainMenuFrame extends JPanel {
         gbc.gridy = 0;
         add(container, gbc);
 
-        play.addActionListener(e -> {
-            System.out.println("PLAY CLICKED");
-            mainFrame.showGameView(username);
-        });
-
-        leaderboard.addActionListener(e -> {
-            System.out.println("LEADERBOARD CLICKED");
-            mainFrame.showLeaderboardView(username);
-        });
-
-        logout.addActionListener(e -> {
-            System.out.println("LOGOUT CLICKED");
-            mainFrame.showLoginView();
-        });
+        play.addActionListener(e -> mainFrame.showGameView(username));
+        leaderboard.addActionListener(e -> mainFrame.showLeaderboardView(username));
+        logout.addActionListener(e -> mainFrame.showLoginView());
     }
 }
