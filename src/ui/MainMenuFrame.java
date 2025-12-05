@@ -6,7 +6,6 @@ import java.awt.*;
 public class MainMenuFrame extends BaseFrame {
 
     private Image bg = new ImageIcon("assets/bg/menu_bg.png").getImage();
-
     public MainMenuFrame(LoginFrame mainFrame, String username) {
         super(mainFrame, username);
     }
@@ -63,3 +62,4 @@ public class MainMenuFrame extends BaseFrame {
         logout.addActionListener(e -> mainFrame.showLoginView());
     }
 }
+
