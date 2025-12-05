@@ -5,8 +5,13 @@ import java.awt.*;
 import java.sql.*;
 import database.DBConnection;
 
-public class RegisterFrame extends JPanel {
+public class RegisterFrame extends BaseFrame {
+
     private Image bg = new ImageIcon("assets/bg/login_bg.png").getImage();
+
+    public RegisterFrame(LoginFrame mainFrame) {
+        super(mainFrame, null);
+    }
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -14,11 +19,9 @@ public class RegisterFrame extends JPanel {
         g.drawImage(bg, 0, 0, getWidth(), getHeight(), null);
     }
 
-    private final LoginFrame mainFrame;
+    @Override
+    protected void initComponents() {
 
-    public RegisterFrame(LoginFrame mainFrame) {
-
-        this.mainFrame = mainFrame;
         setLayout(new GridBagLayout());
         setBackground(UIStyles.BACKGROUND);
 
